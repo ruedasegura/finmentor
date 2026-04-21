@@ -1,5 +1,5 @@
 // ============================================
-// FINMENTOR AI - APP PRINCIPAL (VERSIÓN COMPLETA)
+// FINMENTOR AI - VERSIÓN FINAL (PRODUCTO VENDIBLE)
 // ============================================
 
 // Variables globales
@@ -10,7 +10,8 @@ let financialData = {
     gastos: 0,
     utilidad: 0,
     margen: 0,
-    history: []
+    history: [],
+    saldoActual: 5000000
 };
 let previousData = null;
 let financialChart = null;
@@ -26,19 +27,28 @@ document.addEventListener('DOMContentLoaded', function() {
             currentUser = user;
             currentPlan = await getUserPlan(user.uid);
             await loadConsultasHoy();
+            
+            // Actualizar UI del sidebar
             document.getElementById('userEmail').textContent = user.email;
             document.getElementById('userPlan').textContent = `Plan: ${currentPlan === 'basic' ? 'Básico' : currentPlan === 'pro' ? 'Pro' : 'CFO'}`;
+            
+            // Mostrar/ocultar límite de consultas
+            const iaLimitInfo = document.getElementById('iaLimitInfo');
+            if (iaLimitInfo) {
+                if (currentPlan === 'basic') {
+                    iaLimitInfo.style.display = 'block';
+                    document.getElementById('consultasRestantes').textContent = `${3 - consultasHoy} consultas restantes hoy`;
+                } else {
+                    iaLimitInfo.style.display = 'none';
+                }
+            }
             
             if (window.location.pathname.includes('dashboard.html')) {
                 await loadFinancialData();
                 await loadPreviousData();
                 await loadHistoryData();
                 setupDashboardEvents();
-                updateMainInsight();
-                updateRecommendations();
-                updateSubScores();
-                updateProgressComparison();
-                updateCashFlowProjection();
+                updateAll();
             }
         } else if (!window.location.pathname.includes('index.html')) {
             window.location.href = 'index.html';
@@ -83,7 +93,20 @@ async function loadFinancialData() {
     const doc = await firebase.firestore().collection('financial_data').doc(currentUser.uid).get();
     if (doc.exists) {
         financialData = doc.data();
+        if (!financialData.saldoActual) financialData.saldoActual = 5000000;
         updateDashboardUI();
+    } else {
+        // Intentar cargar desde onboarding
+        const onboarding = await firebase.firestore().collection('onboarding').doc(currentUser.uid).get();
+        if (onboarding.exists) {
+            const data = onboarding.data();
+            financialData.ingresos = data.monthlyIncome || 0;
+            financialData.gastos = data.monthlyExpenses || 0;
+            financialData.utilidad = financialData.ingresos - financialData.gastos;
+            financialData.margen = financialData.ingresos > 0 ? (financialData.utilidad / financialData.ingresos * 100).toFixed(1) : 0;
+            await saveFinancialData();
+            updateDashboardUI();
+        }
     }
 }
 
@@ -106,13 +129,19 @@ async function saveHistorySnapshot() {
     const doc = await historyRef.get();
     const history = doc.exists ? doc.data().snapshots || [] : [];
     
-    history.push({
-        date: new Date(),
-        ingresos: financialData.ingresos,
-        gastos: financialData.gastos,
-        utilidad: financialData.utilidad,
-        margen: parseFloat(financialData.margen)
-    });
+    // Evitar duplicados en el mismo día
+    const hoy = new Date().toDateString();
+    const yaExisteHoy = history.some(h => new Date(h.date).toDateString() === hoy);
+    
+    if (!yaExisteHoy) {
+        history.push({
+            date: new Date(),
+            ingresos: financialData.ingresos,
+            gastos: financialData.gastos,
+            utilidad: financialData.utilidad,
+            margen: parseFloat(financialData.margen)
+        });
+    }
     
     while (history.length > 12) history.shift();
     await historyRef.set({ snapshots: history });
@@ -137,6 +166,10 @@ function calculateMetrics() {
     
     saveFinancialData();
     saveHistorySnapshot();
+    updateAll();
+}
+
+function updateAll() {
     updateDashboardUI();
     updateMainInsight();
     updateRecommendations();
@@ -154,17 +187,20 @@ function updateDashboardUI() {
     document.getElementById('ingresosInput').value = financialData.ingresos;
     document.getElementById('gastosInput').value = financialData.gastos;
     
+    const saldoInput = document.getElementById('saldoActual');
+    if (saldoInput) saldoInput.value = financialData.saldoActual;
+    
     updateScore();
     updateChart();
     updateReportContent();
 }
 
 function formatCurrency(value) {
-    return `$${value.toLocaleString()}`;
+    return `$${Math.round(value).toLocaleString()}`;
 }
 
 // ============================================
-// INSIGHT PRINCIPAL MEJORADO (con déficit diario y "estás dejando de ganar")
+// 1. INSIGHT PRINCIPAL ECONÓMICO Y CONTUNDENTE
 // ============================================
 function updateMainInsight() {
     const iconEl = document.getElementById('mainInsightIcon');
@@ -177,17 +213,19 @@ function updateMainInsight() {
     const ingresos = financialData.ingresos;
     const gastos = financialData.gastos;
     
-    // Caso 1: Utilidad negativa - déficit diario
+    // Caso 1: Utilidad negativa - pérdida diaria
     if (utilidad < 0) {
-        const deficitDiario = Math.abs(utilidad) / 30;
-        const diasQuiebra = financialData.saldoActual ? Math.floor(financialData.saldoActual / (Math.abs(utilidad)/30)) : 30;
+        const perdidaDiaria = Math.abs(utilidad) / 30;
+        const saldo = financialData.saldoActual || 5000000;
+        const diasQuiebra = Math.floor(saldo / perdidaDiaria);
         
         iconEl.textContent = '🚨';
         titleEl.textContent = '¡ALERTA CRÍTICA!';
         messageEl.innerHTML = `
-            <strong>Estás perdiendo $${deficitDiario.toLocaleString()} DIARIOS.</strong><br>
+            <strong>💰 Estás perdiendo $${perdidaDiaria.toLocaleString()} DIARIOS.</strong><br>
             Tu negocio pierde $${Math.abs(utilidad).toLocaleString()} al mes.<br>
-            ${financialData.saldoActual ? `⚠️ En ${diasQuiebra} días podrías quedarte sin liquidez.` : ''}
+            ⚠️ A este ritmo, en <strong>${diasQuiebra} días</strong> podrías quedarte sin liquidez.<br>
+            <span style="font-size:0.9rem; opacity:0.9;">🔴 Tu negocio NO es sostenible actualmente.</span>
         `;
         actionBtn.style.display = 'block';
         actionBtn.textContent = 'Ver plan de recuperación →';
@@ -195,18 +233,18 @@ function updateMainInsight() {
     } 
     // Caso 2: Margen bajo (<20%) - "Estás dejando de ganar"
     else if (margen < 20 && margen > 0) {
-        const aumentoRecomendado = Math.max(15, Math.ceil((gastos * 1.2 - ingresos) / ingresos * 100));
+        const aumentoRecomendado = 12;
         const nuevosIngresos = ingresos * (1 + aumentoRecomendado / 100);
         const nuevaUtilidad = nuevosIngresos - gastos;
-        const mejora = nuevaUtilidad - utilidad;
+        const perdida = nuevaUtilidad - utilidad;
         const porcentajeMejora = ((nuevaUtilidad / utilidad) - 1) * 100;
         
         iconEl.textContent = '⚠️';
         titleEl.textContent = 'Estás dejando de ganar dinero';
         messageEl.innerHTML = `
-            <strong>💰 Estás dejando de ganar $${mejora.toLocaleString()} al mes.</strong><br>
-            Si subes precios un ${aumentoRecomendado}%, tu utilidad pasaría de <strong>$${utilidad.toLocaleString()}</strong> a <strong>$${nuevaUtilidad.toLocaleString()}</strong>.<br>
-            📈 Esto representa un aumento del ${porcentajeMejora.toFixed(0)}% en tu ganancia mensual.
+            <strong>💰 Estás dejando de ganar $${perdida.toLocaleString()} al mes.</strong><br>
+            Si subes precios <strong>${aumentoRecomendado}%</strong>, tu utilidad pasaría de <strong>$${utilidad.toLocaleString()}</strong> a <strong>$${nuevaUtilidad.toLocaleString()}</strong>.<br>
+            📈 Esto representa un aumento del <strong>${porcentajeMejora.toFixed(0)}%</strong> en tu ganancia mensual.
         `;
         actionBtn.style.display = 'block';
         actionBtn.textContent = 'Simular aumento de precios →';
@@ -222,7 +260,7 @@ function updateMainInsight() {
         messageEl.innerHTML = `
             <strong>💰 Tienes un negocio saludable con ${margen}% de margen.</strong><br>
             Puedes reinvertir hasta <strong>$${inversionRecomendada.toLocaleString()}</strong> mensuales para crecer.<br>
-            📈 Potencial de crecimiento: +$${crecimientoPotencial.toLocaleString()} adicionales en 3 meses.
+            📈 Potencial de crecimiento: <strong>+$${crecimientoPotencial.toLocaleString()}</strong> adicionales en 3 meses.
         `;
         actionBtn.style.display = 'block';
         actionBtn.textContent = 'Ver oportunidades de crecimiento →';
@@ -234,7 +272,7 @@ function updateMainInsight() {
         iconEl.textContent = '📊';
         titleEl.textContent = 'Negocio estable, pero mejorable';
         messageEl.innerHTML = `
-            Tu margen actual es ${margen}%. Optimizando costos, podrías aumentar tu utilidad en <strong>$${mejoraPotencial.toLocaleString()}</strong> mensuales.
+            Tu margen actual es <strong>${margen}%</strong>. Optimizando costos, podrías aumentar tu utilidad en <strong>$${mejoraPotencial.toLocaleString()}</strong> mensuales.
         `;
         actionBtn.style.display = 'block';
         actionBtn.textContent = 'Ver cómo mejorar →';
@@ -253,12 +291,12 @@ function showImprovementTips() {
 }
 
 function simulatePriceIncrease() {
-    const aumento = prompt('¿Qué porcentaje de aumento deseas simular?', '15');
+    const aumento = prompt('¿Qué porcentaje de aumento deseas simular?', '12');
     if (aumento) {
         const nuevosIngresos = financialData.ingresos * (1 + parseFloat(aumento) / 100);
         const nuevaUtilidad = nuevosIngresos - financialData.gastos;
         const mejora = nuevaUtilidad - financialData.utilidad;
-        alert(`📊 SIMULACIÓN DE PRECIOS:\n\nIngresos actuales: $${financialData.ingresos.toLocaleString()}\nNuevos ingresos: $${nuevosIngresos.toLocaleString()}\n\nUtilidad actual: $${financialData.utilidad.toLocaleString()}\nNueva utilidad: $${nuevaUtilidad.toLocaleString()}\n\n💰 Ganancia adicional: +$${mejora.toLocaleString()} mensuales`);
+        alert(`📊 SIMULACIÓN DE PRECIOS:\n\n📈 DIAGNÓSTICO ACTUAL:\n• Ingresos: $${financialData.ingresos.toLocaleString()}\n• Utilidad: $${financialData.utilidad.toLocaleString()}\n• Margen: ${financialData.margen}%\n\n📈 CON AUMENTO DEL ${aumento}%:\n• Nuevos ingresos: $${nuevosIngresos.toLocaleString()}\n• Nueva utilidad: $${nuevaUtilidad.toLocaleString()}\n\n💰 IMPACTO ECONÓMICO:\n• Ganancia adicional: +$${mejora.toLocaleString()}\n• Aumento del ${((nuevaUtilidad / financialData.utilidad) * 100 - 100).toFixed(0)}% en utilidad\n\n✅ ACCIÓN CONCRETA:\nSube precios entre ${Math.max(10, parseFloat(aumento)-2)}% y ${parseFloat(aumento)}% en los próximos 15 días.`);
     }
 }
 
@@ -267,37 +305,36 @@ function showGrowthOpportunities() {
 }
 
 // ============================================
-// PROYECCIÓN DE FLUJO DE CAJA (días de quiebra)
+// 2. PROYECCIÓN DE FLUJO DE CAJA (DÍAS DE QUIEBRA)
 // ============================================
 function updateCashFlowProjection() {
     const utilidad = financialData.utilidad;
     const flujoMensual = utilidad;
-    
-    // Simular saldo actual (puedes pedirlo al usuario)
-    let saldoActual = financialData.saldoActual || 5000000; // Valor por defecto
     const cashFlowCard = document.getElementById('cashFlowInsight');
     if (!cashFlowCard) return;
     
     if (flujoMensual < 0) {
         const deficitDiario = Math.abs(flujoMensual) / 30;
-        const diasQuiebra = Math.floor(saldoActual / deficitDiario);
+        const saldo = financialData.saldoActual || 5000000;
+        const diasQuiebra = Math.floor(saldo / deficitDiario);
         cashFlowCard.innerHTML = `
             <div class="cashflow-warning">
                 <span class="cashflow-icon">⚠️</span>
                 <div class="cashflow-text">
-                    <strong>Riesgo de liquidez</strong><br>
+                    <strong>Riesgo de liquidez</strong>
                     Con este ritmo, tendrás problemas de liquidez en <strong>${diasQuiebra} días</strong>.
                 </div>
             </div>
         `;
     } else {
-        const mesesSeguro = Math.floor(saldoActual / flujoMensual);
+        const saldo = financialData.saldoActual || 5000000;
+        const mesesSeguro = Math.floor(saldo / flujoMensual);
         cashFlowCard.innerHTML = `
             <div class="cashflow-success">
                 <span class="cashflow-icon">✅</span>
                 <div class="cashflow-text">
-                    <strong>Flujo de caja positivo</strong><br>
-                    Tu negocio es sostenible. Sin cambios, aguantarías ${mesesSeguro} meses con tu saldo actual.
+                    <strong>Flujo de caja positivo</strong>
+                    Tu negocio es sostenible. Sin cambios, aguantarías <strong>${mesesSeguro} meses</strong> con tu saldo actual.
                 </div>
             </div>
         `;
@@ -305,14 +342,22 @@ function updateCashFlowProjection() {
 }
 
 // ============================================
-// COMPARACIÓN AUTOMÁTICA CON SEMANA ANTERIOR
+// 3. COMPARACIÓN AUTOMÁTICA (PROGRESO)
 // ============================================
 async function updateProgressComparison() {
-    if (!previousData) return;
+    const history = await loadHistoryData();
+    if (history.length < 2) {
+        const comparisonDiv = document.getElementById('progressComparison');
+        if (comparisonDiv) {
+            comparisonDiv.innerHTML = `<div class="progress-neutral">📊 Completa al menos 2 semanas de datos para ver tu progreso.</div>`;
+        }
+        return;
+    }
     
-    const currentMargen = parseFloat(financialData.margen);
-    const previousMargen = previousData.margen;
-    const diferenciaMargen = (currentMargen - previousMargen).toFixed(1);
+    const current = history[history.length - 1];
+    const previous = history[history.length - 2];
+    const diferenciaMargen = (current.margen - previous.margen).toFixed(1);
+    const diferenciaUtilidad = current.utilidad - previous.utilidad;
     
     const comparisonDiv = document.getElementById('progressComparison');
     if (!comparisonDiv) return;
@@ -320,29 +365,29 @@ async function updateProgressComparison() {
     if (diferenciaMargen > 0) {
         comparisonDiv.innerHTML = `
             <div class="progress-positive">
-                📈 ¡Mejoraste tu margen en <strong>+${diferenciaMargen} puntos</strong> esta semana!<br>
-                Vas en la dirección correcta. Sigue así.
+                📈 <strong>¡Mejoraste tu margen en +${diferenciaMargen} puntos!</strong><br>
+                Tu utilidad aumentó $${diferenciaUtilidad.toLocaleString()} respecto a la semana pasada. Vas en la dirección correcta.
             </div>
         `;
     } else if (diferenciaMargen < 0) {
         comparisonDiv.innerHTML = `
             <div class="progress-negative">
-                📉 Tu margen bajó <strong>${diferenciaMargen} puntos</strong> respecto a la semana pasada.<br>
-                Revisa tus gastos o considera aumentar precios.
+                📉 <strong>Tu margen bajó ${diferenciaMargen} puntos</strong><br>
+                Tu utilidad disminuyó $${Math.abs(diferenciaUtilidad).toLocaleString()} respecto a la semana pasada. Revisa tus gastos o considera aumentar precios.
             </div>
         `;
     } else {
         comparisonDiv.innerHTML = `
             <div class="progress-neutral">
                 📊 Tu margen se mantiene estable respecto a la semana pasada.<br>
-                Busca oportunidades de mejora.
+                Busca oportunidades de mejora para crecer.
             </div>
         `;
     }
 }
 
 // ============================================
-// SCORE FINANCIERO Y SUBINDICADORES
+// 4. SCORE FINANCIERO CON EXPLICACIÓN
 // ============================================
 function updateScore() {
     const margen = parseFloat(financialData.margen);
@@ -354,15 +399,31 @@ function updateScore() {
     score += utilidad > 0 ? 30 : 0;
     score = Math.min(Math.round(score), 100);
     
-    let rating = '', color = '', message = '';
-    if (score >= 80) { rating = 'Excelente'; color = '#48bb78'; message = 'Tu negocio está en excelente estado.'; }
-    else if (score >= 60) { rating = 'Bueno'; color = '#ed8936'; message = 'Vas por buen camino, hay áreas de mejora.'; }
-    else if (score >= 40) { rating = 'Riesgo moderado'; color = '#f56565'; message = 'Tu negocio necesita atención.'; }
-    else { rating = 'Riesgo crítico'; color = '#e53e3e'; message = '¡Toma acción inmediata!'; }
+    let rating = '', color = '', explicacion = '';
+    if (score >= 80) { 
+        rating = 'Excelente'; 
+        color = '#48bb78'; 
+        explicacion = 'Tu negocio está en excelente estado. Sigue así y considera reinvertir.'; 
+    }
+    else if (score >= 60) { 
+        rating = 'Bueno'; 
+        color = '#ed8936'; 
+        explicacion = 'Vas por buen camino, pero hay áreas de mejora. Enfócate en optimizar costos.'; 
+    }
+    else if (score >= 40) { 
+        rating = 'Riesgo moderado'; 
+        color = '#f56565'; 
+        explicacion = 'Tu negocio necesita atención. Prioriza aumentar ingresos o reducir gastos.'; 
+    }
+    else { 
+        rating = 'Riesgo crítico'; 
+        color = '#e53e3e'; 
+        explicacion = '¡Toma acción inmediata! Estás en riesgo financiero. Sigue el plan de recuperación.'; 
+    }
     
     document.getElementById('scoreValue').textContent = score;
     document.getElementById('scoreRating').textContent = rating;
-    document.getElementById('scoreMessage').textContent = message;
+    document.getElementById('scoreMessage').textContent = explicacion;
     
     const circle = document.getElementById('scoreCircle');
     const circumference = 283;
@@ -376,18 +437,21 @@ function updateSubScores() {
     const utilidad = financialData.utilidad;
     const ingresos = financialData.ingresos;
     
+    // Rentabilidad (basada en margen)
     const rentabilidad = Math.min(Math.max(margen, 0), 100);
     document.getElementById('subRentabilidad').textContent = `${rentabilidad}%`;
     
+    // Liquidez (capacidad de cubrir gastos)
     const liquidez = ingresos > 0 ? Math.min((financialData.utilidad / ingresos) * 100 + 50, 100) : 0;
     document.getElementById('subLiquidez').textContent = `${Math.round(liquidez)}%`;
     
+    // Riesgo (inverso a la rentabilidad)
     const riesgo = 100 - rentabilidad;
     document.getElementById('subRiesgo').textContent = `${Math.round(riesgo)}%`;
 }
 
 // ============================================
-// RECOMENDACIONES PROACTIVAS (mejoradas)
+// 5. RECOMENDACIONES PROACTIVAS (CHECKLIST)
 // ============================================
 function updateRecommendations() {
     const container = document.getElementById('recommendationsList');
@@ -405,11 +469,11 @@ function updateRecommendations() {
             { icon: '📊', title: 'Revisa suscripciones', description: 'Cancela herramientas que no usas.', action: 'Calcular' }
         ];
     } else if (margen < 20) {
-        const aumentoRecomendado = Math.max(15, Math.ceil((gastos * 1.2 - ingresos) / ingresos * 100));
+        const aumentoRecomendado = 12;
         const nuevosIngresos = ingresos * (1 + aumentoRecomendado / 100);
         const nuevaUtilidad = nuevosIngresos - gastos;
         recommendations = [
-            { icon: '📈', title: 'Sube precios', description: `Sube precios un ${aumentoRecomendado}% → Utilidad +$${(nuevaUtilidad - utilidad).toLocaleString()}`, action: 'Simular' },
+            { icon: '📈', title: 'Sube precios', description: `Sube precios ${aumentoRecomendado}% → Utilidad +$${(nuevaUtilidad - utilidad).toLocaleString()}`, action: 'Simular' },
             { icon: '📉', title: 'Reduce gastos un 10%', description: `Ahorro potencial: $${Math.round(gastos * 0.1).toLocaleString()}`, action: 'Calcular' },
             { icon: '👥', title: 'Evita contratar', description: 'No es momento de aumentar personal fijo.', action: 'Ver por qué' }
         ];
@@ -440,7 +504,7 @@ function updateRecommendations() {
 }
 
 // ============================================
-// IA MEJORADA CON LÍMITE DE CONSULTAS
+// 6. IA MEJORADA (ESTRUCTURA OBLIGATORIA)
 // ============================================
 async function sendMessage() {
     const input = document.getElementById('chatInput');
@@ -465,7 +529,6 @@ async function sendMessage() {
     const typingMsg = addTypingIndicator();
     
     try {
-        // Intentar con Firebase Function (si está disponible)
         const response = await fetch(`https://us-central1-finmentor-saas.cloudfunctions.net/chatWithCFO`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -496,18 +559,18 @@ function getLocalAIResponse(question) {
     const margen = parseFloat(financialData.margen);
     const utilidad = financialData.utilidad;
     
-    // Precios
+    // PRECIOS - estructura obligatoria
     if (q.includes('precio') || q.includes('subir')) {
-        const aumento = 15;
+        const aumento = 12;
         const nuevosIngresos = ingresos * (1 + aumento / 100);
         const nuevaUtilidad = nuevosIngresos - gastos;
         const mejora = nuevaUtilidad - utilidad;
         const porcentajeMejora = ((nuevaUtilidad / utilidad) - 1) * 100;
         
-        return `📊 DIAGNÓSTICO ACTUAL:\n• Ingresos: $${ingresos.toLocaleString()}\n• Gastos: $${gastos.toLocaleString()}\n• Utilidad: $${utilidad.toLocaleString()}\n• Margen: ${margen}%\n\n📈 SIMULACIÓN (subir precios ${aumento}%):\n• Nuevos ingresos: $${nuevosIngresos.toLocaleString()}\n• Nueva utilidad: $${nuevaUtilidad.toLocaleString()}\n\n💰 IMPACTO ECONÓMICO:\n• Ganancia adicional: +$${mejora.toLocaleString()}\n• Aumento del ${porcentajeMejora.toFixed(0)}% en utilidad\n\n✅ ACCIÓN CONCRETA:\nSube precios entre 12% y 15% en los próximos 15 días.`;
+        return `📊 DIAGNÓSTICO ACTUAL:\n• Ingresos: $${ingresos.toLocaleString()}\n• Gastos: $${gastos.toLocaleString()}\n• Utilidad: $${utilidad.toLocaleString()}\n• Margen: ${margen}%\n\n📈 SIMULACIÓN (subir precios ${aumento}%):\n• Nuevos ingresos: $${nuevosIngresos.toLocaleString()}\n• Nueva utilidad: $${nuevaUtilidad.toLocaleString()}\n\n💰 IMPACTO ECONÓMICO:\n• Ganancia adicional: +$${mejora.toLocaleString()}\n• Aumento del ${porcentajeMejora.toFixed(0)}% en utilidad\n\n✅ ACCIÓN CONCRETA:\nSube precios entre 10% y 12% en los próximos 15 días.`;
     }
     
-    // Gastos
+    // GASTOS
     if (q.includes('gasto') || q.includes('reducir') || q.includes('ahorrar')) {
         const ahorroPorcentaje = 20;
         const nuevosGastos = gastos * (1 - ahorroPorcentaje / 100);
@@ -517,7 +580,7 @@ function getLocalAIResponse(question) {
         return `📊 DIAGNÓSTICO ACTUAL:\n• Gastos mensuales: $${gastos.toLocaleString()}\n• Utilidad actual: $${utilidad.toLocaleString()}\n\n📉 SIMULACIÓN (reducir gastos ${ahorroPorcentaje}%):\n• Nuevos gastos: $${nuevosGastos.toLocaleString()}\n• Nueva utilidad: $${nuevaUtilidad.toLocaleString()}\n\n💰 IMPACTO ECONÓMICO:\n• Ahorro mensual: $${ahorro.toLocaleString()}\n• Aumento de ${((nuevaUtilidad / utilidad) * 100 - 100).toFixed(0)}% en utilidad\n\n✅ ACCIÓN CONCRETA:\nCancela suscripciones innecesarias y negocia con proveedores esta semana.`;
     }
     
-    // Contratación
+    // CONTRATACIÓN
     if (q.includes('contratar')) {
         const costoEmpleado = 1500;
         const utilidadConEmpleado = utilidad - costoEmpleado;
@@ -525,7 +588,7 @@ function getLocalAIResponse(question) {
         return `📊 DIAGNÓSTICO ACTUAL:\n• Utilidad mensual: $${utilidad.toLocaleString()}\n• Margen: ${margen}%\n\n👥 SIMULACIÓN (contratar empleado $${costoEmpleado}):\n• Nueva utilidad: $${utilidadConEmpleado.toLocaleString()}\n\n💰 IMPACTO ECONÓMICO:\n${utilidadConEmpleado > 0 ? '✅ Tu negocio SÍ puede contratar. La utilidad seguiría siendo positiva.' : '❌ NO es recomendable contratar aún. Primero aumenta tu utilidad.'}\n\n✅ ACCIÓN CONCRETA:\n${utilidadConEmpleado > 0 ? 'Considera un contrato a prueba por 3 meses.' : 'Optimiza procesos antes de contratar.'}`;
     }
     
-    // General
+    // RESPUESTA GENERAL
     return `📊 DIAGNÓSTICO ACTUAL:\n• Ingresos: $${ingresos.toLocaleString()}\n• Gastos: $${gastos.toLocaleString()}\n• Utilidad: $${utilidad.toLocaleString()}\n• Margen: ${margen}%\n\n⚠️ PRINCIPAL RIESGO:\n${margen < 20 ? 'Margen bajo - vulnerabilidad financiera' : 'Dependencia de pocos clientes'}\n\n🎯 3 ACCIONES CONCRETAS:\n1. ${margen < 20 ? 'Sube precios 15%' : 'Incrementa inversión en marketing'}\n2. Reduce gastos variables un 10%\n3. Diversifica fuentes de ingreso\n\n🔑 RECOMENDACIÓN CLAVE:\n${margen < 20 ? 'Reduce gastos un 15% este mes' : 'Reinvierte el 30% de utilidades en crecimiento'}`;
 }
 
@@ -677,6 +740,15 @@ function setupDashboardEvents() {
         calculateMetrics();
     };
     
+    const saldoInput = document.getElementById('saldoActual');
+    if (saldoInput) {
+        saldoInput.onchange = (e) => {
+            financialData.saldoActual = parseFloat(e.target.value) || 5000000;
+            saveFinancialData();
+            updateCashFlowProjection();
+        };
+    }
+    
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.onclick = () => {
             const section = btn.dataset.section;
@@ -692,6 +764,19 @@ function setupDashboardEvents() {
     document.getElementById('chatInput').onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
     document.getElementById('exportCSVBtn').onclick = exportToCSV;
     document.getElementById('compareHistoryBtn').onclick = compareHistory;
-    document.getElementById('upgradeBtn').onclick = () => alert('🚀 Próximamente: actualiza a Pro por $29/mes para IA ilimitada y proyecciones avanzadas.');
+    document.getElementById('upgradeBtn').onclick = () => alert('🚀 Actualiza a Pro por $29/mes para:\n✅ IA ilimitada\n✅ Proyecciones avanzadas\n✅ Simulaciones completas\n✅ Soporte prioritario');
     document.getElementById('logoutBtn').onclick = async () => { await firebase.auth().signOut(); window.location.href = 'index.html'; };
+    
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    if (saveSettingsBtn) {
+        saveSettingsBtn.onclick = async () => {
+            const currency = document.getElementById('currencySelect').value;
+            const emailNotifications = document.getElementById('emailNotifications').checked;
+            await firebase.firestore().collection('users').doc(currentUser.uid).update({
+                currency: currency,
+                emailNotifications: emailNotifications
+            });
+            alert('✅ Configuración guardada');
+        };
+    }
 }

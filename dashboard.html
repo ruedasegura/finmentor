@@ -42,7 +42,7 @@
             <div id="dashboardSection" class="section active">
                 <h1>Dashboard Financiero</h1>
                 
-                <!-- 1. INSIGHT PRINCIPAL DOMINANTE -->
+                <!-- 1. INSIGHT PRINCIPAL ECONÓMICO -->
                 <div id="mainInsightCard" class="main-insight-card">
                     <div class="insight-icon" id="mainInsightIcon">📊</div>
                     <div class="insight-content">
@@ -52,7 +52,7 @@
                     </div>
                 </div>
                 
-                <!-- 2. PROYECCIÓN DE FLUJO DE CAJA (DÍAS DE QUIEBRA) -->
+                <!-- 2. PROYECCIÓN DE FLUJO DE CAJA -->
                 <div id="cashFlowInsight" class="cashflow-card">
                     <div class="cashflow-loading">Calculando flujo de caja...</div>
                 </div>
@@ -93,7 +93,7 @@
                     </div>
                 </div>
                 
-                <!-- 4. COMPARACIÓN AUTOMÁTICA CON SEMANA ANTERIOR -->
+                <!-- 4. PROGRESO (COMPARACIÓN AUTOMÁTICA) -->
                 <div id="progressComparison" class="progress-card">
                     <div class="progress-loading">Cargando historial...</div>
                 </div>
@@ -120,15 +120,15 @@
                     </div>
                 </div>
                 
-                <!-- 6. RECOMENDACIONES PROACTIVAS -->
+                <!-- 6. RECOMENDACIONES PROACTIVAS (CHECKLIST) -->
                 <div class="recommendations-card">
-                    <h3>💡 Recomendaciones para tu negocio</h3>
+                    <h3>💡 Acciones recomendadas esta semana</h3>
                     <div id="recommendationsList" class="recommendations-list">
                         <div class="recommendation-placeholder">Cargando recomendaciones...</div>
                     </div>
                 </div>
                 
-                <!-- 7. GRÁFICO EVOLUCIÓN MENSUAL -->
+                <!-- 7. GRÁFICO -->
                 <div class="chart-card">
                     <h2>📊 Evolución mensual</h2>
                     <canvas id="financialChart" width="400" height="200"></canvas>
@@ -136,7 +136,7 @@
             </div>
 
             <!-- ============================================ -->
-            <!-- COPILOT SECTION -->
+            <!-- COPILOTO SECTION -->
             <!-- ============================================ -->
             <div id="copilotSection" class="section">
                 <h1>🤖 Copiloto Financiero IA</h1>
@@ -144,8 +144,8 @@
                     ⚡ Actualiza al plan Pro para acceder a la IA ilimitada
                 </div>
                 
-                <!-- Límite de consultas IA (solo plan básico) -->
-                <div id="iaLimitInfo" class="ia-limit-info">
+                <!-- Límite de consultas (solo plan básico) -->
+                <div id="iaLimitInfo" class="ia-limit-info" style="display: none;">
                     <span id="consultasRestantes">3 consultas restantes hoy</span>
                 </div>
                 
@@ -169,7 +169,7 @@
             </div>
 
             <!-- ============================================ -->
-            <!-- HISTORY SECTION (EVOLUCIÓN) -->
+            <!-- HISTORY SECTION -->
             <!-- ============================================ -->
             <div id="historySection" class="section">
                 <h1>📊 Evolución Histórica</h1>
