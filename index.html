@@ -6,11 +6,9 @@
     <title>FinMentor AI - Tu CFO inteligente</title>
     <link rel="stylesheet" href="style.css">
     
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-functions-compat.js"></script>
 </head>
 <body>
     <nav class="navbar">
@@ -77,7 +75,7 @@
                         <li>✗ Copiloto IA</li>
                         <li>✗ Proyecciones</li>
                     </ul>
-                    <button class="btn-secondary" onclick="selectPlan('basic')">Gratis</button>
+                    <button class="btn-secondary" onclick="seleccionarPlan('basic')">Gratis</button>
                 </div>
                 <div class="pricing-card popular">
                     <div class="popular-badge">Más popular</div>
@@ -90,7 +88,7 @@
                         <li>✓ Score financiero</li>
                         <li>✓ Exportar reportes</li>
                     </ul>
-                    <button class="btn-primary" onclick="selectPlan('pro')">Elegir Pro</button>
+                    <button class="btn-primary" onclick="seleccionarPlan('pro')">Elegir Pro</button>
                 </div>
                 <div class="pricing-card">
                     <h3>CFO</h3>
@@ -102,16 +100,16 @@
                         <li>✓ Soporte prioritario 24/7</li>
                         <li>✓ Reportes ejecutivos mensuales</li>
                     </ul>
-                    <button class="btn-secondary" onclick="selectPlan('cfo')">Elegir CFO</button>
+                    <button class="btn-secondary" onclick="seleccionarPlan('cfo')">Elegir CFO</button>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Login Modal -->
+    <!-- Modal de Login -->
     <div id="loginModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
+            <span class="close" onclick="cerrarModal()">&times;</span>
             <h2>Accede a FinMentor AI</h2>
             <button id="googleLoginBtn" class="btn-google">
                 🚀 Continuar con Google
@@ -120,11 +118,116 @@
             <input type="email" id="loginEmail" placeholder="correo@ejemplo.com">
             <input type="password" id="loginPassword" placeholder="Contraseña">
             <button id="emailLoginBtn" class="btn-primary">Iniciar sesión</button>
-            <button id="signupBtn" class="btn-secondary" style="margin-top: 10px;">Crear cuenta nueva</button>
+            <p class="signup-link">¿No tienes cuenta? <a href="#" id="showSignup">Regístrate</a></p>
         </div>
     </div>
 
     <script src="firebase-config.js"></script>
-    <script src="app.js"></script>
+    <script>
+        // ============================================
+        // LOGIN SIMPLIFICADO
+        // ============================================
+        
+        const modal = document.getElementById('loginModal');
+        const showBtns = document.querySelectorAll('#showLoginBtn, #heroLoginBtn');
+        const googleBtn = document.getElementById('googleLoginBtn');
+        const emailBtn = document.getElementById('emailLoginBtn');
+        const signupLink = document.getElementById('showSignup');
+        const closeBtn = document.querySelector('.close');
+        
+        let modoRegistro = false;
+        
+        // Mostrar modal
+        showBtns.forEach(btn => {
+            btn.onclick = () => modal.style.display = 'flex';
+        });
+        
+        // Cerrar modal
+        closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+        
+        // Login con Google
+        googleBtn.onclick = async () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try {
+                const result = await firebase.auth().signInWithPopup(provider);
+                await crearUsuarioSiNoExiste(result.user);
+                modal.style.display = 'none';
+                window.location.href = 'onboarding.html';
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        };
+        
+        // Login/Registro con email
+        emailBtn.onclick = async () => {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                alert('Completa todos los campos');
+                return;
+            }
+            
+            try {
+                let userCredential;
+                if (modoRegistro) {
+                    userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                } else {
+                    userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
+                }
+                await crearUsuarioSiNoExiste(userCredential.user);
+                modal.style.display = 'none';
+                window.location.href = 'onboarding.html';
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        };
+        
+        // Cambiar entre login y registro
+        signupLink.onclick = (e) => {
+            e.preventDefault();
+            modoRegistro = !modoRegistro;
+            emailBtn.textContent = modoRegistro ? 'Registrarse' : 'Iniciar sesión';
+            signupLink.textContent = modoRegistro ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate';
+        };
+        
+        // Crear usuario en Firestore si no existe
+        async function crearUsuarioSiNoExiste(user) {
+            const userRef = firebase.firestore().collection('users').doc(user.uid);
+            const doc = await userRef.get();
+            if (!doc.exists) {
+                await userRef.set({
+                    email: user.email,
+                    plan: 'basic',
+                    createdAt: new Date()
+                });
+            }
+        }
+        
+        // Selección de planes
+        function seleccionarPlan(plan) {
+            let mensaje = '';
+            switch(plan) {
+                case 'basic': mensaje = '✅ Plan Básico seleccionado. Regístrate para empezar.'; break;
+                case 'pro': mensaje = '🚀 Plan Pro: $29/mes. Regístrate para empezar.'; break;
+                case 'cfo': mensaje = '💎 Plan CFO: $99/mes. Regístrate para empezar.'; break;
+            }
+            alert(mensaje);
+            modal.style.display = 'flex';
+        }
+        
+        // Escuchar autenticación (redirigir si ya está logueado)
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (user && !window.location.pathname.includes('dashboard.html') && !window.location.pathname.includes('onboarding.html')) {
+                const onboardingDoc = await firebase.firestore().collection('onboarding').doc(user.uid).get();
+                if (onboardingDoc.exists) {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    window.location.href = 'onboarding.html';
+                }
+            }
+        });
+    </script>
 </body>
 </html>
