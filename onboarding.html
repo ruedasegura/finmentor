@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configura tu negocio - FinMentor AI</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="onboarding-container">
+        <div class="onboarding-card">
+            <div class="onboarding-header">
+                <span class="logo-icon">📊</span>
+                <h1>Bienvenido a FinMentor AI</h1>
+                <p>Cuéntanos sobre tu negocio para personalizar tu experiencia</p>
+            </div>
+            
+            <form id="onboardingForm">
+                <div class="form-group">
+                    <label>📝 ¿Cómo se llama tu negocio?</label>
+                    <input type="text" id="businessName" placeholder="Ej: Mi Freelance Studio" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>💼 ¿A qué te dedicas?</label>
+                    <select id="businessType" required>
+                        <option value="">Selecciona una opción</option>
+                        <option value="freelancer">Freelancer / Consultor independiente</option>
+                        <option value="ecommerce">E-commerce / Tienda online</option>
+                        <option value="creator">Creador de contenido / Influencer</option>
+                        <option value="agency">Agencia / Estudio creativo</option>
+                        <option value="saas">SaaS / Software</option>
+                        <option value="other">Otro</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>💰 Ingresos mensuales promedio</label>
+                        <div class="currency-input">
+                            <span class="currency-symbol">$</span>
+                            <input type="number" id="monthlyIncome" placeholder="0" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>📉 Gastos mensuales promedio</label>
+                        <div class="currency-input">
+                            <span class="currency-symbol">$</span>
+                            <input type="number" id="monthlyExpenses" placeholder="0" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>🌎 Moneda</label>
+                    <select id="currency" required>
+                        <option value="COP">🇨🇴 Peso colombiano (COP)</option>
+                        <option value="MXN">🇲🇽 Peso mexicano (MXN)</option>
+                        <option value="ARS">🇦🇷 Peso argentino (ARS)</option>
+                        <option value="USD">🇺🇸 Dólar estadounidense (USD)</option>
+                        <option value="EUR">🇪🇺 Euro (EUR)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>🎯 ¿Cuál es tu objetivo principal?</label>
+                    <select id="mainGoal">
+                        <option value="profit">Aumentar mi rentabilidad</option>
+                        <option value="cashflow">Mejorar mi flujo de caja</option>
+                        <option value="growth">Hacer crecer mi negocio</option>
+                        <option value="tax">Optimizar mis impuestos</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-primary btn-block">Comenzar a usar FinMentor →</button>
+            </form>
+            
+            <p class="onboarding-footer">Tus datos están seguros y solo los usarás para recibir recomendaciones personalizadas.</p>
+        </div>
+    </div>
+    
+    <script src="firebase-config.js"></script>
+    <script>
+        // Esperar a que Firebase cargue
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Onboarding cargado");
+            
+            const form = document.getElementById('onboardingForm');
+            
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault(); // Evitar que la página se recargue
+                console.log("Formulario enviado");
+                
+                const user = firebase.auth().currentUser;
+                if (!user) {
+                    alert('Debes iniciar sesión');
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                // Obtener valores
+                const businessName = document.getElementById('businessName').value;
+                const businessType = document.getElementById('businessType').value;
+                const monthlyIncome = parseFloat(document.getElementById('monthlyIncome').value);
+                const monthlyExpenses = parseFloat(document.getElementById('monthlyExpenses').value);
+                const currency = document.getElementById('currency').value;
+                const mainGoal = document.getElementById('mainGoal').value;
+                
+                // Validar
+                if (!businessName || !businessType || !monthlyIncome || !monthlyExpenses) {
+                    alert('Por favor completa todos los campos');
+                    return;
+                }
+                
+                // Mostrar loading
+                const btn = form.querySelector('button[type="submit"]');
+                const originalText = btn.textContent;
+                btn.textContent = 'Guardando...';
+                btn.disabled = true;
+                
+                try {
+                    // Guardar onboarding
+                    await firebase.firestore().collection('onboarding').doc(user.uid).set({
+                        businessName: businessName,
+                        businessType: businessType,
+                        monthlyIncome: monthlyIncome,
+                        monthlyExpenses: monthlyExpenses,
+                        currency: currency,
+                        mainGoal: mainGoal,
+                        completedAt: new Date()
+                    });
+                    
+                    // Crear datos financieros iniciales
+                    const utilidad = monthlyIncome - monthlyExpenses;
+                    const margen = monthlyIncome > 0 ? (utilidad / monthlyIncome * 100).toFixed(1) : 0;
+                    
+                    await firebase.firestore().collection('financial_data').doc(user.uid).set({
+                        ingresos: monthlyIncome,
+                        gastos: monthlyExpenses,
+                        utilidad: utilidad,
+                        margen: margen,
+                        history: [],
+                        updatedAt: new Date()
+                    });
+                    
+                    console.log("Datos guardados exitosamente");
+                    window.location.href = 'dashboard.html';
+                    
+                } catch (error) {
+                    console.error("Error guardando:", error);
+                    alert('Error al guardar: ' + error.message);
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

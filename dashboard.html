@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FinMentor AI</title>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-functions-compat.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-logo">📊 FinMentor AI</div>
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-section="dashboard">📈 Dashboard</button>
+                <button class="nav-btn" data-section="copilot">🤖 Copiloto IA</button>
+                <button class="nav-btn" data-section="projections">📊 Proyecciones</button>
+                <button class="nav-btn" data-section="reports">📄 Reportes</button>
+                <button class="nav-btn" data-section="settings">⚙️ Configuración</button>
+            </nav>
+            <div class="sidebar-footer">
+                <div id="userInfo">
+                    <div id="userEmail" class="user-email"></div>
+                    <div id="userPlan" class="user-plan">Plan: Básico</div>
+                </div>
+                <button id="upgradeBtn" class="btn-upgrade">⬆️ Mejorar plan</button>
+                <button id="logoutBtn" class="btn-logout">Cerrar sesión</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div id="dashboardSection" class="section active">
+                <h1>Dashboard Financiero</h1>
+                
+                <div class="score-card">
+                    <h3>🎯 Score Financiero</h3>
+                    <div class="score-container">
+                        <div class="score-circle">
+                            <svg viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="45" fill="none" stroke="#e0e0e0" stroke-width="8"/>
+                                <circle id="scoreCircle" cx="50" cy="50" r="45" fill="none" stroke="#667eea" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round"/>
+                            </svg>
+                            <div class="score-text">
+                                <span id="scoreValue">0</span>
+                                <span class="score-max">/100</span>
+                            </div>
+                        </div>
+                        <div class="score-info">
+                            <div id="scoreRating" class="score-rating">Calculando...</div>
+                            <div id="scoreMessage" class="score-message"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Ingresos Mensuales</div>
+                        <div class="metric-value" id="ingresosValue">$0</div>
+                        <input type="number" id="ingresosInput" class="metric-input" placeholder="Ingresos">
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Gastos Mensuales</div>
+                        <div class="metric-value" id="gastosValue">$0</div>
+                        <input type="number" id="gastosInput" class="metric-input" placeholder="Gastos">
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Utilidad</div>
+                        <div class="metric-value" id="utilidadValue">$0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Margen</div>
+                        <div class="metric-value" id="margenValue">0%</div>
+                    </div>
+                </div>
+                
+                <div class="insights-card">
+                    <h2>🔍 Insights Automáticos</h2>
+                    <div id="insightsContent" class="insights-content"></div>
+                </div>
+                
+                <div class="chart-card">
+                    <h2>📊 Evolución mensual</h2>
+                    <canvas id="financialChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <div id="copilotSection" class="section">
+                <h1>🤖 Copiloto Financiero IA</h1>
+                <div id="iaAccessWarning" class="warning-banner" style="display: none;">
+                    ⚡ Actualiza al plan Pro para acceder a la IA ilimitada
+                </div>
+                <div class="copilot-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot">
+                            👋 Hola, soy tu CFO con IA. Pregúntame sobre:
+                            <ul>
+                                <li>💰 "¿Debo subir mis precios?"</li>
+                                <li>📉 "¿Cómo puedo reducir gastos?"</li>
+                                <li>👥 "¿Puedo contratar a alguien?"</li>
+                                <li>📊 "¿Es sostenible mi negocio?"</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="Escribe tu pregunta aquí...">
+                        <button id="sendMessageBtn" class="btn-primary">Enviar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="projectionsSection" class="section">
+                <h1>📊 Proyecciones Financieras</h1>
+                <div class="projection-controls">
+                    <label>Proyectar a:</label>
+                    <select id="projectionMonths">
+                        <option value="3">3 meses</option>
+                        <option value="6">6 meses</option>
+                        <option value="12">12 meses</option>
+                    </select>
+                    <button id="calculateProjectionBtn" class="btn-secondary">Calcular</button>
+                </div>
+                <div id="projectionResults"></div>
+                <canvas id="projectionChart" width="400" height="200"></canvas>
+            </div>
+
+            <div id="reportsSection" class="section">
+                <h1>📄 Reportes Financieros</h1>
+                <div class="reports-container">
+                    <button id="exportCSVBtn" class="btn-secondary">Exportar a CSV</button>
+                    <div id="reportPreview" class="report-preview">
+                        <h3>Resumen ejecutivo</h3>
+                        <div id="reportContent"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settingsSection" class="section">
+                <h1>⚙️ Configuración</h1>
+                <div class="settings-container">
+                    <div class="setting-group">
+                        <label>Moneda</label>
+                        <select id="currencySelect">
+                            <option value="COP">COP - Peso colombiano</option>
+                            <option value="MXN">MXN - Peso mexicano</option>
+                            <option value="ARS">ARS - Peso argentino</option>
+                            <option value="USD">USD - Dólar</option>
+                        </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>Notificaciones por email</label>
+                        <input type="checkbox" id="emailNotifications">
+                    </div>
+                    <button id="saveSettingsBtn" class="btn-primary">Guardar cambios</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

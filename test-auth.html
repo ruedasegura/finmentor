@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auth FinMentor</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <h1>🔐 Prueba de Autenticación Firebase</h1>
+    <button id="googleBtn">✅ Continuar con Google</button>
+    <button id="emailBtn">📧 Iniciar sesión con Email</button>
+    <div id="resultado" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        // Configuración de Firebase (TUS DATOS REALES)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMd90lC10EUX11l8KM1qNRChnIczehT2s",
+            authDomain: "finmentor-saas.firebaseapp.com",
+            projectId: "finmentor-saas",
+            storageBucket: "finmentor-saas.firebasestorage.app",
+            messagingSenderId: "428449665776",
+            appId: "1:428449665776:web:d1a96cb85796938eace835"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        const resultado = document.getElementById('resultado');
+
+        function mostrarMensaje(texto, esError = false) {
+            resultado.innerHTML = `<div style="color: ${esError ? 'red' : 'green'}">${texto}</div>`;
+            console.log((esError ? 'ERROR: ' : 'OK: ') + texto);
+        }
+
+        // Esperar a que el DOM cargue completamente
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Página cargada, configurando botones...");
+            
+            const googleBtn = document.getElementById('googleBtn');
+            const emailBtn = document.getElementById('emailBtn');
+            
+            if (googleBtn) {
+                googleBtn.onclick = function() {
+                    console.log("Botón de Google clickeado");
+                    mostrarMensaje('🔄 Conectando con Google...');
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    auth.signInWithPopup(provider)
+                        .then((result) => {
+                            mostrarMensaje(`✅ Conectado exitosamente: ${result.user.email}`);
+                            console.log("Usuario:", result.user);
+                        })
+                        .catch((error) => {
+                            mostrarMensaje(`❌ Error: ${error.message}`, true);
+                            console.error("Error detallado:", error);
+                        });
+                };
+            } else {
+                console.error("No se encontró el botón de Google");
+            }
+            
+            if (emailBtn) {
+                emailBtn.onclick = function() {
+                    const email = prompt("Email de prueba:", "test@example.com");
+                    const password = prompt("Contraseña (mínimo 6 caracteres):", "123456");
+                    
+                    if (email && password) {
+                        auth.createUserWithEmailAndPassword(email, password)
+                            .then((result) => {
+                                mostrarMensaje(`✅ Usuario creado: ${result.user.email}`);
+                            })
+                            .catch((error) => {
+                                if (error.code === 'auth/email-already-in-use') {
+                                    auth.signInWithEmailAndPassword(email, password)
+                                        .then((result) => {
+                                            mostrarMensaje(`✅ Login exitoso: ${result.user.email}`);
+                                        })
+                                        .catch((loginError) => {
+                                            mostrarMensaje(`❌ Error: ${loginError.message}`, true);
+                                        });
+                                } else {
+                                    mostrarMensaje(`❌ Error: ${error.message}`, true);
+                                }
+                            });
+                    }
+                };
+            }
+        });
+    </script>
+</body>
+</html>
