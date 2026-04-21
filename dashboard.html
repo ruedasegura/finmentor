@@ -36,11 +36,13 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Dashboard Section -->
+            <!-- ============================================ -->
+            <!-- DASHBOARD SECTION -->
+            <!-- ============================================ -->
             <div id="dashboardSection" class="section active">
                 <h1>Dashboard Financiero</h1>
                 
-                <!-- INSIGHT PRINCIPAL DOMINANTE (NUEVO) -->
+                <!-- 1. INSIGHT PRINCIPAL DOMINANTE -->
                 <div id="mainInsightCard" class="main-insight-card">
                     <div class="insight-icon" id="mainInsightIcon">📊</div>
                     <div class="insight-content">
@@ -50,7 +52,12 @@
                     </div>
                 </div>
                 
-                <!-- Score Financiero -->
+                <!-- 2. PROYECCIÓN DE FLUJO DE CAJA (DÍAS DE QUIEBRA) -->
+                <div id="cashFlowInsight" class="cashflow-card">
+                    <div class="cashflow-loading">Calculando flujo de caja...</div>
+                </div>
+                
+                <!-- 3. SCORE FINANCIERO -->
                 <div class="score-card">
                     <h3>🎯 Score Financiero</h3>
                     <div class="score-container">
@@ -86,7 +93,12 @@
                     </div>
                 </div>
                 
-                <!-- Métricas principales -->
+                <!-- 4. COMPARACIÓN AUTOMÁTICA CON SEMANA ANTERIOR -->
+                <div id="progressComparison" class="progress-card">
+                    <div class="progress-loading">Cargando historial...</div>
+                </div>
+                
+                <!-- 5. MÉTRICAS PRINCIPALES -->
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-label">Ingresos Mensuales</div>
@@ -108,7 +120,7 @@
                     </div>
                 </div>
                 
-                <!-- RECOMENDACIONES PROACTIVAS (NUEVO) -->
+                <!-- 6. RECOMENDACIONES PROACTIVAS -->
                 <div class="recommendations-card">
                     <h3>💡 Recomendaciones para tu negocio</h3>
                     <div id="recommendationsList" class="recommendations-list">
@@ -116,19 +128,27 @@
                     </div>
                 </div>
                 
-                <!-- Gráfico mensual -->
+                <!-- 7. GRÁFICO EVOLUCIÓN MENSUAL -->
                 <div class="chart-card">
                     <h2>📊 Evolución mensual</h2>
                     <canvas id="financialChart" width="400" height="200"></canvas>
                 </div>
             </div>
 
-            <!-- Copilot Section (mejorado) -->
+            <!-- ============================================ -->
+            <!-- COPILOT SECTION -->
+            <!-- ============================================ -->
             <div id="copilotSection" class="section">
                 <h1>🤖 Copiloto Financiero IA</h1>
                 <div id="iaAccessWarning" class="warning-banner" style="display: none;">
                     ⚡ Actualiza al plan Pro para acceder a la IA ilimitada
                 </div>
+                
+                <!-- Límite de consultas IA (solo plan básico) -->
+                <div id="iaLimitInfo" class="ia-limit-info">
+                    <span id="consultasRestantes">3 consultas restantes hoy</span>
+                </div>
+                
                 <div class="copilot-container">
                     <div class="chat-messages" id="chatMessages">
                         <div class="message bot">
@@ -148,7 +168,9 @@
                 </div>
             </div>
 
-            <!-- History Section (evolución histórica) -->
+            <!-- ============================================ -->
+            <!-- HISTORY SECTION (EVOLUCIÓN) -->
+            <!-- ============================================ -->
             <div id="historySection" class="section">
                 <h1>📊 Evolución Histórica</h1>
                 <div class="history-controls">
@@ -183,7 +205,9 @@
                 <canvas id="historyChart" width="400" height="200"></canvas>
             </div>
 
-            <!-- Reports Section -->
+            <!-- ============================================ -->
+            <!-- REPORTS SECTION -->
+            <!-- ============================================ -->
             <div id="reportsSection" class="section">
                 <h1>📄 Reportes Financieros</h1>
                 <div class="reports-container">
@@ -195,7 +219,9 @@
                 </div>
             </div>
 
-            <!-- Settings Section -->
+            <!-- ============================================ -->
+            <!-- SETTINGS SECTION -->
+            <!-- ============================================ -->
             <div id="settingsSection" class="section">
                 <h1>⚙️ Configuración</h1>
                 <div class="settings-container">
@@ -207,6 +233,10 @@
                             <option value="ARS">ARS - Peso argentino</option>
                             <option value="USD">USD - Dólar</option>
                         </select>
+                    </div>
+                    <div class="setting-group">
+                        <label>Saldo actual en banco</label>
+                        <input type="number" id="saldoActual" placeholder="Ej: 5000000">
                     </div>
                     <div class="setting-group">
                         <label>Notificaciones por email</label>
