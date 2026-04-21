@@ -14,12 +14,13 @@
 </head>
 <body>
     <div class="dashboard-container">
+        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-logo">📊 FinMentor AI</div>
             <nav class="sidebar-nav">
                 <button class="nav-btn active" data-section="dashboard">📈 Dashboard</button>
                 <button class="nav-btn" data-section="copilot">🤖 Copiloto IA</button>
-                <button class="nav-btn" data-section="projections">📊 Proyecciones</button>
+                <button class="nav-btn" data-section="history">📊 Evolución</button>
                 <button class="nav-btn" data-section="reports">📄 Reportes</button>
                 <button class="nav-btn" data-section="settings">⚙️ Configuración</button>
             </nav>
@@ -33,10 +34,23 @@
             </div>
         </aside>
 
+        <!-- Main Content -->
         <main class="main-content">
+            <!-- Dashboard Section -->
             <div id="dashboardSection" class="section active">
                 <h1>Dashboard Financiero</h1>
                 
+                <!-- INSIGHT PRINCIPAL DOMINANTE (NUEVO) -->
+                <div id="mainInsightCard" class="main-insight-card">
+                    <div class="insight-icon" id="mainInsightIcon">📊</div>
+                    <div class="insight-content">
+                        <h2 id="mainInsightTitle">Analizando tu negocio...</h2>
+                        <p id="mainInsightMessage">Cargando datos financieros</p>
+                        <button id="mainInsightAction" class="insight-action-btn" style="display: none;">Tomar acción →</button>
+                    </div>
+                </div>
+                
+                <!-- Score Financiero -->
                 <div class="score-card">
                     <h3>🎯 Score Financiero</h3>
                     <div class="score-container">
@@ -55,8 +69,24 @@
                             <div id="scoreMessage" class="score-message"></div>
                         </div>
                     </div>
+                    <!-- Subindicadores -->
+                    <div class="sub-scores">
+                        <div class="sub-score">
+                            <span class="sub-label">💰 Rentabilidad</span>
+                            <span class="sub-value" id="subRentabilidad">0%</span>
+                        </div>
+                        <div class="sub-score">
+                            <span class="sub-label">💧 Liquidez</span>
+                            <span class="sub-value" id="subLiquidez">0%</span>
+                        </div>
+                        <div class="sub-score">
+                            <span class="sub-label">⚠️ Riesgo</span>
+                            <span class="sub-value" id="subRiesgo">0%</span>
+                        </div>
+                    </div>
                 </div>
                 
+                <!-- Métricas principales -->
                 <div class="metrics-grid">
                     <div class="metric-card">
                         <div class="metric-label">Ingresos Mensuales</div>
@@ -78,17 +108,22 @@
                     </div>
                 </div>
                 
-                <div class="insights-card">
-                    <h2>🔍 Insights Automáticos</h2>
-                    <div id="insightsContent" class="insights-content"></div>
+                <!-- RECOMENDACIONES PROACTIVAS (NUEVO) -->
+                <div class="recommendations-card">
+                    <h3>💡 Recomendaciones para tu negocio</h3>
+                    <div id="recommendationsList" class="recommendations-list">
+                        <div class="recommendation-placeholder">Cargando recomendaciones...</div>
+                    </div>
                 </div>
                 
+                <!-- Gráfico mensual -->
                 <div class="chart-card">
                     <h2>📊 Evolución mensual</h2>
                     <canvas id="financialChart" width="400" height="200"></canvas>
                 </div>
             </div>
 
+            <!-- Copilot Section (mejorado) -->
             <div id="copilotSection" class="section">
                 <h1>🤖 Copiloto Financiero IA</h1>
                 <div id="iaAccessWarning" class="warning-banner" style="display: none;">
@@ -99,35 +134,56 @@
                         <div class="message bot">
                             👋 Hola, soy tu CFO con IA. Pregúntame sobre:
                             <ul>
-                                <li>💰 "¿Debo subir mis precios?"</li>
-                                <li>📉 "¿Cómo puedo reducir gastos?"</li>
-                                <li>👥 "¿Puedo contratar a alguien?"</li>
-                                <li>📊 "¿Es sostenible mi negocio?"</li>
+                                <li>💰 "¿Debo subir mis precios? ¿Cuánto ganaría?"</li>
+                                <li>📉 "¿Cuánto puedo ahorrar si reduzco gastos un 20%?"</li>
+                                <li>👥 "¿Puedo contratar a alguien? ¿Cuánto me costaría?"</li>
+                                <li>📊 "Proyéctame mis finanzas a 6 meses"</li>
                             </ul>
                         </div>
                     </div>
                     <div class="chat-input-area">
-                        <input type="text" id="chatInput" placeholder="Escribe tu pregunta aquí...">
+                        <input type="text" id="chatInput" placeholder="Ej: ¿Cuánto ganaría si subo precios un 15%?">
                         <button id="sendMessageBtn" class="btn-primary">Enviar</button>
                     </div>
                 </div>
             </div>
 
-            <div id="projectionsSection" class="section">
-                <h1>📊 Proyecciones Financieras</h1>
-                <div class="projection-controls">
-                    <label>Proyectar a:</label>
-                    <select id="projectionMonths">
-                        <option value="3">3 meses</option>
-                        <option value="6">6 meses</option>
-                        <option value="12">12 meses</option>
+            <!-- History Section (evolución histórica) -->
+            <div id="historySection" class="section">
+                <h1>📊 Evolución Histórica</h1>
+                <div class="history-controls">
+                    <label>Comparar con:</label>
+                    <select id="historyPeriod">
+                        <option value="month">Mes anterior</option>
+                        <option value="quarter">Trimestre anterior</option>
+                        <option value="year">Año anterior</option>
                     </select>
-                    <button id="calculateProjectionBtn" class="btn-secondary">Calcular</button>
+                    <button id="compareHistoryBtn" class="btn-secondary">Comparar</button>
                 </div>
-                <div id="projectionResults"></div>
-                <canvas id="projectionChart" width="400" height="200"></canvas>
+                <div id="historyComparison" class="history-comparison">
+                    <div class="comparison-card">
+                        <h4>📈 Evolución del Margen</h4>
+                        <div class="comparison-values">
+                            <span id="currentMargin">0%</span>
+                            <span>→</span>
+                            <span id="previousMargin">0%</span>
+                        </div>
+                        <div id="marginTrend" class="trend-indicator"></div>
+                    </div>
+                    <div class="comparison-card">
+                        <h4>💰 Evolución de Utilidad</h4>
+                        <div class="comparison-values">
+                            <span id="currentProfit">$0</span>
+                            <span>→</span>
+                            <span id="previousProfit">$0</span>
+                        </div>
+                        <div id="profitTrend" class="trend-indicator"></div>
+                    </div>
+                </div>
+                <canvas id="historyChart" width="400" height="200"></canvas>
             </div>
 
+            <!-- Reports Section -->
             <div id="reportsSection" class="section">
                 <h1>📄 Reportes Financieros</h1>
                 <div class="reports-container">
@@ -139,6 +195,7 @@
                 </div>
             </div>
 
+            <!-- Settings Section -->
             <div id="settingsSection" class="section">
                 <h1>⚙️ Configuración</h1>
                 <div class="settings-container">
