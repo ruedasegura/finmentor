@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Firebase</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+    <h1>Test Firebase</h1>
+    <button id="btn">Iniciar sesión con Google</button>
+    <div id="resultado"></div>
+
+    <script>
+        // 🔥 REEMPLAZA CON TU CONFIGURACIÓN REAL
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMd90lC10EUX11l8KM1qNRChnIczehT2s",
+            authDomain: "finmentor-saas.firebaseapp.com",
+            projectId: "finmentor-saas",
+            storageBucket: "finmentor-saas.firebasestorage.app",
+            messagingSenderId: "428449665776",
+            appId: "1:428449665776:web:d1a96cb85796938eace835"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        document.getElementById('btn').onclick = () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then(result => {
+                    document.getElementById('resultado').innerHTML = `✅ Conectado: ${result.user.email}`;
+                })
+                .catch(error => {
+                    document.getElementById('resultado').innerHTML = `❌ Error: ${error.message}`;
+                });
+        };
+    </script>
+</body>
+</html>

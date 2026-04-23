@@ -109,7 +109,7 @@
     <!-- Modal de Login -->
     <div id="loginModal" class="modal" style="display: none;">
         <div class="modal-content">
-            <span class="close" onclick="cerrarModal()">&times;</span>
+            <span class="close" id="closeModalBtn">&times;</span>
             <h2>Accede a FinMentor AI</h2>
             <button id="googleLoginBtn" class="btn-google">
                 🚀 Continuar con Google
@@ -133,7 +133,11 @@
         const googleBtn = document.getElementById('googleLoginBtn');
         const emailBtn = document.getElementById('emailLoginBtn');
         const signupLink = document.getElementById('showSignup');
-        const closeBtn = document.querySelector('.close');
+        const closeBtn = document.getElementById('closeModalBtn');
+
+        function cerrarModal() {
+            modal.style.display = 'none';
+        }
         
         let modoRegistro = false;
         
